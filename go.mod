@@ -1,5 +1,5 @@
-module vearleenCustomLogs
+module github.com/Glebtverdo/vearleenGoLogs
 
 go 1.24.1
 
-require github.com/robfig/cron/v3 v3.0.1 // indirect
+require github.com/robfig/cron/v3 v3.0.1
