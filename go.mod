@@ -1,4 +1,4 @@
-module github.com/Glebtverdo/vearleenGoLogs
+module github.com/Glebtverdo/goLogs
 
 go 1.24.1
 
