@@ -1,34 +1,23 @@
 package logs
 
-import "log"
-
-var (
-	infoLogger  *log.Logger
-	debugLogger *log.Logger
-	warnLogger  *log.Logger
-	errorLogger *log.Logger
-)
+import "github.com/Glebtverdo/goLogs/initLoggers"
 
 func Info(format string, v ...any) {
-	if infoLogger != nil {
-		infoLogger.Printf(format, v...)
-	}
+	initLoggers.GetLogger("info").Printf(format, v...)
 }
 
 func Debug(format string, v ...any) {
-	if debugLogger != nil {
-		debugLogger.Printf(format, v...)
-	}
+	initLoggers.GetLogger("debug").Printf(format, v...)
 }
 
 func Warn(format string, v ...any) {
-	if warnLogger != nil {
-		warnLogger.Printf(format, v...)
-	}
+	initLoggers.GetLogger("warn").Printf(format, v...)
 }
 
 func Error(format string, v ...any) {
-	if errorLogger != nil {
-		errorLogger.Printf(format, v...)
-	}
+	initLoggers.GetLogger("error").Printf(format, v...)
+}
+
+func Log(level string, format string, v ...any) {
+	initLoggers.GetLogger(level).Printf(format, v...)
 }

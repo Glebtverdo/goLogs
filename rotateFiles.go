@@ -5,22 +5,49 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
+
+	"github.com/Glebtverdo/goLogs/models"
+	"github.com/robfig/cron/v3"
 )
 
-func rotateLogFile(dir, currentFile, backupFile string, logFile **os.File, initFunc func(string)) {
-	path := fmt.Sprintf("%s/%s", dir, currentFile)
-	backup := fmt.Sprintf("%s/%s", dir, backupFile)
+func rotateLogs(config models.LogsSettings, writers models.OutWriters) error {
+	for level, setting := range config {
+		if setting.OutputType != "file" {
+			continue
+		}
+		current := fmt.Sprintf("%s/%s", setting.Folder, setting.File)
+		backup := fmt.Sprintf("%s/%s_%s.log", setting.Folder, level, logTimestamp())
 
-	if *logFile != nil {
-		(*logFile).Close()
+		if f, ok := writers[level].(*os.File); ok {
+			err := f.Close()
+			Error(err.Error())
+		}
+
+		if err := copyFile(current, backup); err != nil {
+			Error(err.Error())
+			continue
+		}
+
+		if err := os.Truncate(current, 0); err != nil {
+			Error(err.Error())
+			continue
+		}
+
+		f, err := os.OpenFile(current, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			Error(err.Error())
+			continue
+		}
+		writers[level] = f
 	}
+	return nil
+}
 
-	if err := copyFile(path, backup); err != nil {
-		log.Fatalf("Failed to backup %s: %v", currentFile, err)
-	}
-
-	_ = os.Truncate(path, 0)
-	initFunc(currentFile)
+func logTimestamp() string {
+	return fmt.Sprintf("%02d_%02d_%d_%02d_%02d",
+		time.Now().Day(), time.Now().Month(), time.Now().Year(),
+		time.Now().Hour(), time.Now().Minute())
 }
 
 func copyFile(src, dst string) error {
@@ -38,4 +65,30 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(to, from)
 	return err
+}
+
+func initLogRotationCron(config models.LogsSettings, writers models.OutWriters) {
+	c := cron.New()
+
+	for level, setting := range config {
+		if setting.OutputType != "file" {
+			continue
+		}
+
+		levelCopy := level
+
+		_, err := c.AddFunc("@daily", func() {
+			err := rotateLogs(config, writers)
+			if err != nil {
+				log.Printf("rotation failed for %s: %v", levelCopy, err)
+			} else {
+				log.Printf("rotated log for %s successfully", levelCopy)
+			}
+		})
+		if err != nil {
+			log.Printf("failed to schedule rotation for %s: %v", levelCopy, err)
+		}
+	}
+
+	c.Start()
 }
